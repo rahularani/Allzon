@@ -1,0 +1,412 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  BUYER
+  SUPPLIER
+  ADMIN
+  VERIFICATION_STAFF
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  MORE_INFO_REQUIRED
+}
+
+enum ProductStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  CLOSED
+  CANCELLED
+}
+
+enum BusinessType {
+  MANUFACTURER
+  WHOLESALER
+  DISTRIBUTOR
+  DEALER
+  TRADER
+  IMPORTER
+  EXPORTER
+}
+
+enum NotificationType {
+  ENQUIRY_RECEIVED
+  ENQUIRY_UPDATED
+  PRODUCT_APPROVED
+  PRODUCT_REJECTED
+  VERIFICATION_APPROVED
+  VERIFICATION_REJECTED
+  MORE_INFO_REQUESTED
+  SYSTEM
+}
+
+enum DocumentType {
+  GST_CERTIFICATE
+  PAN
+  BUSINESS_PROOF
+  ADDRESS_PROOF
+}
+
+enum WishlistItemType {
+  PRODUCT
+  SUPPLIER
+}
+
+enum AuditAction {
+  SUPPLIER_APPROVED
+  SUPPLIER_REJECTED
+  PRODUCT_APPROVED
+  PRODUCT_REJECTED
+  USER_SUSPENDED
+  USER_ACTIVATED
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DELETED
+  VERIFICATION_REVIEWED
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  phone        String   @unique
+  passwordHash String
+  role         UserRole @default(BUYER)
+  isActive     Boolean  @default(true)
+  isVerified   Boolean  @default(false) // phone OTP verified
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  buyerProfile    BuyerProfile?
+  supplierProfile SupplierProfile?
+  refreshTokens   RefreshToken[]
+  otpRecords      OTPRecord[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model OTPRecord {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String
+  otpHash   String
+  purpose   String // 'login' | 'register' | 'reset'
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@map("otp_records")
+}
+
+model BuyerProfile {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName     String
+  businessName String?
+  businessType BusinessType?
+  phone        String?
+  email        String?
+  city         String?
+  state        String?
+  profileImage String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  enquiries     Enquiry[]
+  wishlistItems WishlistItem[]
+
+  @@map("buyer_profiles")
+}
+
+model SupplierProfile {
+  id                 String             @id @default(uuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug               String             @unique
+  businessName       String
+  businessType       BusinessType
+  ownerName          String
+  phone              String
+  email              String?
+  gstNumber          String?
+  panNumber          String?
+  yearEstablished    Int?
+  description        String?            @db.Text
+  address            String?
+  state              String?
+  district           String?
+  city               String?
+  pincode            String?
+  logoUrl            String?
+  coverUrl           String?
+  verificationStatus VerificationStatus @default(PENDING)
+  responseRate       Float              @default(0)
+  rating             Float              @default(0)
+  productCount       Int                @default(0)
+  isActive           Boolean            @default(true)
+  isFeatured         Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  products         Product[]
+  enquiries        Enquiry[]
+  verificationDocs VerificationDocument[]
+  wishlistItems    WishlistItem[] // buyers who saved this supplier
+
+  @@index([verificationStatus])
+  @@index([state])
+  @@index([isFeatured])
+  @@map("supplier_profiles")
+}
+
+model Category {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  icon         String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subcategories Subcategory[]
+  products      Product[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id           String   @id @default(uuid())
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name         String
+  slug         String   @unique
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  products Product[]
+
+  @@index([categoryId])
+  @@map("subcategories")
+}
+
+model Product {
+  id               String          @id @default(uuid())
+  slug             String          @unique
+  name             String
+  description      String?         @db.Text
+  categoryId       String
+  category         Category        @relation(fields: [categoryId], references: [id])
+  subcategoryId    String?
+  subcategory      Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  supplierId       String
+  supplier         SupplierProfile @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  priceMin         Decimal?        @db.Decimal(12, 2)
+  priceMax         Decimal?        @db.Decimal(12, 2)
+  priceUnit        String? // "per Piece", "per Kg"
+  moq              Int? // minimum order quantity
+  moqUnit          String? // "Pieces", "Kg"
+  availableQty     Int?
+  supplyAbility    String? // "10,000 Pieces/Month"
+  deliveryTime     String? // "7-10 Days"
+  paymentTerms     String?
+  brand            String?
+  modelNumber      String?
+  material         String?
+  color            String?
+  size             String?
+  packagingDetails String?
+  gstPercent       Decimal?        @db.Decimal(5, 2)
+  location         String?
+  status           ProductStatus   @default(PENDING)
+  isActive         Boolean         @default(true)
+  isFeatured       Boolean         @default(false)
+  viewCount        Int             @default(0)
+  enquiryCount     Int             @default(0)
+  rejectionReason  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  images         ProductImage[]
+  specifications ProductSpecification[]
+  enquiries      Enquiry[]
+  wishlistItems  WishlistItem[]
+
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([status])
+  @@index([location])
+  @@index([isFeatured])
+  @@map("products")
+}
+
+model ProductImage {
+  id           String   @id @default(uuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cloudinaryId String
+  url          String
+  altText      String?
+  isPrimary    Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+model ProductSpecification {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+
+  @@index([productId])
+  @@map("product_specifications")
+}
+
+model Enquiry {
+  id                    String          @id @default(uuid())
+  buyerId               String
+  buyer                 BuyerProfile    @relation(fields: [buyerId], references: [id])
+  supplierId            String
+  supplier              SupplierProfile @relation(fields: [supplierId], references: [id])
+  productId             String?
+  product               Product?        @relation(fields: [productId], references: [id])
+  quantity              String // "500 Pieces"
+  deliveryLocation      String
+  expectedDeliveryDate  DateTime?
+  additionalRequirement String?         @db.Text
+  status                EnquiryStatus   @default(NEW)
+  supplierNote          String?         @db.Text
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([buyerId])
+  @@index([supplierId])
+  @@index([productId])
+  @@index([status])
+  @@map("enquiries")
+}
+
+model VerificationDocument {
+  id           String             @id @default(uuid())
+  supplierId   String
+  supplier     SupplierProfile    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  documentType DocumentType
+  cloudinaryId String
+  url          String // private Cloudinary URL — never returned in public APIs
+  fileName     String
+  reviewNote   String?
+  status       VerificationStatus @default(PENDING)
+  reviewedAt   DateTime?
+  reviewedBy   String? // Admin userId
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([supplierId])
+  @@map("verification_documents")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json? // { enquiryId, productId, supplierId, etc. }
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model WishlistItem {
+  id         String           @id @default(uuid())
+  buyerId    String
+  buyer      BuyerProfile     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  itemType   WishlistItemType
+  productId  String?
+  product    Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplierId String?
+  supplier   SupplierProfile? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@unique([buyerId, productId])
+  @@unique([buyerId, supplierId])
+  @@index([buyerId])
+  @@map("wishlist_items")
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  action    AuditAction
+  entity    String // "Supplier", "Product", "User"
+  entityId  String
+  ipAddress String?
+  userAgent String?
+  metadata  Json? // before/after snapshot
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

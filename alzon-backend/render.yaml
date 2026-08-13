@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: alzon-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    region: ohio
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alzon-staging-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: OTP_PROVIDER
+        value: console
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLIENT_BUYER_URL
+        sync: false
+      - key: CLIENT_SUPPLIER_URL
+        sync: false
+      - key: CLIENT_ADMIN_URL
+        sync: false
+
+databases:
+  - name: alzon-staging-db
+    databaseName: alzon_staging
+    user: alzon_admin
+    plan: starter
+    region: ohio

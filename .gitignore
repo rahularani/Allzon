@@ -1,0 +1,26 @@
+# Monorepo Dependencies
+node_modules/
+dist/
+build/
+coverage/
+
+# Environment Variables (STRICTLY IGNORED)
+.env
+.env.*
+!.env.example
+
+# OS / Editor Files
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Testing Reports
+.playwright/
+test-results/
+playwright-report/
+
+# Package manager
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
