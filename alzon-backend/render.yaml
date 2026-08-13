@@ -2,6 +2,7 @@ services:
   - type: web
     name: alzon-backend
     env: docker
+    rootDir: alzon-backend
     dockerfilePath: ./Dockerfile
     region: ohio
     plan: starter
