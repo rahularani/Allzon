@@ -19,17 +19,19 @@ COPY . .
 # Generate Prisma Client & Build TypeScript
 RUN npx prisma generate
 RUN npm run build
+RUN npx tsc prisma/seed.ts --esModuleInterop
 
 # Production Stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install openssl for Prisma and runtime
+# Add required libraries
 RUN apk add --no-cache openssl
 
-# Set environment to production
+# Set environment
 ENV NODE_ENV=production
+ENV PORT=3000
 
 # Copy package files and Prisma schema
 COPY package*.json ./
@@ -43,9 +45,10 @@ COPY --from=builder /app/dist ./dist
 # Copy generated Prisma Client
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma/seed.js ./prisma/
 
 # Expose backend port
 EXPOSE 3000
 
 # Start command
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run prisma:seed && npm run start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && npm run start"]
