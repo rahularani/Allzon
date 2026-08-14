@@ -8,8 +8,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { setAccessToken, setUser } = useAuthStore();
   const [isRegister, setIsRegister] = useState(false);
-  const [phone, setPhone] = useState('9000000003');
-  const [password, setPassword] = useState('Password@123');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -115,7 +115,7 @@ export default function LoginPage() {
             <input
               type="text"
               className="input-base"
-              placeholder="9000000003"
+              placeholder="Enter mobile number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required

@@ -12,8 +12,8 @@ export default function SupplierLoginPage() {
   const [step, setStep] = useState(1);
 
   // Form states
-  const [phone, setPhone] = useState('9000000004');
-  const [password, setPassword] = useState('Password@123');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
 
@@ -131,7 +131,7 @@ export default function SupplierLoginPage() {
               <input
                 type="text"
                 className="input-base"
-                placeholder="9000000004"
+                placeholder="Enter mobile number"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
@@ -175,7 +175,7 @@ export default function SupplierLoginPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Mobile Phone Number *</label>
-                  <input type="text" className="input-base" placeholder="9000000004" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  <input type="text" className="input-base" placeholder="Enter mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                 </div>
                 <button type="button" onClick={handleSendOTP} disabled={loading} className="btn-primary" style={{ width: '100%', padding: '12px 0', fontSize: 14 }}>
                   {loading ? 'Sending OTP...' : 'Send Verification OTP'}

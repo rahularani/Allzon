@@ -9,7 +9,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: alzon-staging-db
+          name: alzon-production-db
           property: connectionString
       - key: NODE_ENV
         value: production
@@ -35,6 +35,11 @@ services:
 databases:
   - name: alzon-staging-db
     databaseName: alzon_staging
+    user: alzon_admin
+    plan: starter
+    region: ohio
+  - name: alzon-production-db
+    databaseName: alzon_production
     user: alzon_admin
     plan: starter
     region: ohio

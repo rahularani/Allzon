@@ -7,8 +7,8 @@ import Logo from '../components/Logo';
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const { setAccessToken, setUser } = useAuthStore();
-  const [phone, setPhone] = useState('9000000001');
-  const [password, setPassword] = useState('Password@123');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
             <input
               type="text"
               className="input-base"
-              placeholder="9000000001 (Admin) or 9000000002 (Staff)"
+              placeholder="Enter mobile number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
@@ -89,12 +89,6 @@ export default function AdminLoginPage() {
             {loading ? 'Authenticating...' : 'Enter Console'}
           </button>
         </form>
-
-        <div style={{ marginTop: 24, padding: 14, background: '#F8FAFC', borderRadius: 6, fontSize: 12, color: '#64748B' }}>
-          <strong style={{ color: '#0F172A', display: 'block', marginBottom: 4 }}>Demo Credentials:</strong>
-          <div>• Admin: <code>9000000001</code> / <code>Password@123</code></div>
-          <div>• Verification Staff: <code>9000000002</code> / <code>Password@123</code></div>
-        </div>
       </div>
     </div>
   );
