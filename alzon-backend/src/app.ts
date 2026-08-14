@@ -36,7 +36,7 @@ const allowedOrigins = [
   env.CLIENT_BUYER_URL,
   env.CLIENT_SUPPLIER_URL,
   env.CLIENT_ADMIN_URL,
-];
+].map(url => url.replace(/\/$/, ''));
 
 app.use(
   cors({
