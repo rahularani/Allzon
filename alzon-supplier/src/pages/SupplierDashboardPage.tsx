@@ -1,12 +1,21 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
 export default function SupplierDashboardPage() {
   const navigate = useNavigate();
   const { user, isInitializing, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add_product' | 'enquiries' | 'verification'>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
+  
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('tab', tab);
+      return newParams;
+    });
+  };
 
   const [supplierProfile, setSupplierProfile] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);

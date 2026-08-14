@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
 export default function BuyerDashboard() {
   const navigate = useNavigate();
   const { user, isInitializing, logout } = useAuthStore();
-  const [activeSection, setActiveSection] = useState<'enquiries' | 'wishlist' | 'notifications'>('enquiries');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSection = searchParams.get('section') || 'enquiries';
+
+  const setActiveSection = (section: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('section', section);
+      return newParams;
+    });
+  };
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
@@ -11,7 +11,16 @@ export default function AdminDashboardPage() {
   const isStaff = user?.role === 'VERIFICATION_STAFF';
 
   // Active tab state
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'verification' | 'products' | 'categories' | 'audit'>('stats');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'stats';
+  
+  const setActiveTab = (tab: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('tab', tab);
+      return newParams;
+    });
+  };
 
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
