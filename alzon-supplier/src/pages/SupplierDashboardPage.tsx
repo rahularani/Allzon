@@ -23,7 +23,8 @@ export default function SupplierDashboardPage() {
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // New Product Form State
+  // Product Form State
+  const [editProductId, setEditProductId] = useState<string | null>(null);
   const [prodName, setProdName] = useState('');
   const [prodCatId, setProdCatId] = useState('');
   const [prodPriceMin, setProdPriceMin] = useState('');
@@ -33,6 +34,18 @@ export default function SupplierDashboardPage() {
   const [prodImages, setProdImages] = useState<FileList | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [savingProduct, setSavingProduct] = useState(false);
+
+  const resetForm = () => {
+    setEditProductId(null);
+    setProdName('');
+    setProdCatId(categories.length > 0 ? categories[0].id : '');
+    setProdPriceMin('');
+    setProdPriceMax('');
+    setProdMoq('');
+    setProdDesc('');
+    setProdImages(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Verification Doc Upload State
   const [docType, setDocType] = useState('GST_CERTIFICATE');
@@ -82,17 +95,23 @@ export default function SupplierDashboardPage() {
     setErrorMsg('');
 
     try {
-      // 1. Create product
-      const productRes = await api.post('/products', {
+      const payload = {
         name: prodName,
         categoryId: prodCatId,
         priceMin: parseFloat(prodPriceMin) || 100,
         priceMax: parseFloat(prodPriceMax) || 150,
         moq: parseInt(prodMoq, 10) || 50,
         description: prodDesc,
-      });
+      };
 
-      const productId = productRes.data.data.id;
+      let productId = editProductId;
+
+      if (editProductId) {
+        await api.put(`/products/${editProductId}`, payload);
+      } else {
+        const productRes = await api.post('/products', payload);
+        productId = productRes.data.data.id;
+      }
 
       // 2. Upload images if selected
       if (prodImages && prodImages.length > 0) {
@@ -106,14 +125,8 @@ export default function SupplierDashboardPage() {
         });
       }
 
-      setMessage('Product submitted successfully! 🎉');
-      setProdName('');
-      setProdDesc('');
-      setProdPriceMin('');
-      setProdPriceMax('');
-      setProdMoq('');
-      setProdImages(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setMessage(editProductId ? 'Product updated successfully! 🎉' : 'Product submitted successfully! 🎉');
+      resetForm();
 
       // Refresh product list
       const prodListRes = await api.get('/products/supplier/mine');
@@ -125,9 +138,37 @@ export default function SupplierDashboardPage() {
       }, 2000);
       
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Failed to add product');
+      setErrorMsg(err.response?.data?.message || (editProductId ? 'Failed to update product' : 'Failed to add product'));
     } finally {
       setSavingProduct(false);
+    }
+  };
+
+  const handleEditClick = (product: any) => {
+    setEditProductId(product.id);
+    setProdName(product.name || '');
+    setProdCatId(product.categoryId || '');
+    setProdPriceMin(product.priceMin?.toString() || '');
+    setProdPriceMax(product.priceMax?.toString() || '');
+    setProdMoq(product.moq?.toString() || '');
+    setProdDesc(product.description || '');
+    setProdImages(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setActiveTab('add_product');
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    
+    try {
+      await api.delete(`/products/${productId}`);
+      const prodListRes = await api.get('/products/supplier/mine');
+      setProducts(prodListRes.data.data || []);
+      setMessage('Product deleted successfully.');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Failed to delete product');
+      setTimeout(() => setErrorMsg(''), 3000);
     }
   };
 
@@ -201,7 +242,12 @@ export default function SupplierDashboardPage() {
           ].map((item) => (
             <div
               key={item.key}
-              onClick={() => { setActiveTab(item.key as any); setMessage(''); setErrorMsg(''); }}
+              onClick={() => { 
+                setActiveTab(item.key as any); 
+                setMessage(''); 
+                setErrorMsg(''); 
+                if (item.key === 'add_product') resetForm();
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -317,7 +363,7 @@ export default function SupplierDashboardPage() {
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: '#0F172A', margin: 0 }}>
                 My Product Listings ({products.length})
               </h1>
-              <button onClick={() => setActiveTab('add_product')} className="btn-primary" style={{ padding: '10px 20px', fontSize: 14 }}>
+              <button onClick={() => { resetForm(); setActiveTab('add_product'); }} className="btn-primary" style={{ padding: '10px 20px', fontSize: 14 }}>
                 + Add New Product
               </button>
             </div>
@@ -327,18 +373,19 @@ export default function SupplierDashboardPage() {
                 <div style={{ fontSize: 48, marginBottom: 16 }}>📦</div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>No Products Yet</h3>
                 <p style={{ color: '#64748B', marginBottom: 24 }}>Start adding your wholesale products to reach more buyers.</p>
-                <button onClick={() => setActiveTab('add_product')} className="btn-primary">Add Your First Product</button>
+                <button onClick={() => { resetForm(); setActiveTab('add_product'); }} className="btn-primary">Add Your First Product</button>
               </div>
             ) : (
               <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <span>Product Name</span>
                   <span>Price Range</span>
                   <span>MOQ</span>
                   <span>Status</span>
+                  <span>Actions</span>
                 </div>
                 {products.map((p) => (
-                  <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
+                  <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       {p.images && p.images.length > 0 ? (
                         <img src={p.images[0].url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
@@ -354,6 +401,10 @@ export default function SupplierDashboardPage() {
                         {p.status}
                       </span>
                     </span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => handleEditClick(p)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, color: '#3B82F6', fontWeight: 600 }}>Edit</button>
+                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, color: '#EF4444', fontWeight: 600 }}>Delete</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -361,9 +412,19 @@ export default function SupplierDashboardPage() {
           </div>
         ) : activeTab === 'add_product' ? (
           <div style={{ maxWidth: 720 }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: '#0F172A', marginBottom: 24 }}>
-              Add New Wholesale Product
-            </h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                {editProductId ? 'Edit Wholesale Product' : 'Add New Wholesale Product'}
+              </h1>
+              {editProductId && (
+                <button 
+                  onClick={resetForm} 
+                  className="btn-secondary" style={{ padding: '8px 16px', fontSize: 14 }}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
 
             <div className="card" style={{ padding: 32 }}>
               <form onSubmit={handleAddProduct} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -418,7 +479,7 @@ export default function SupplierDashboardPage() {
                 </div>
 
                 <button data-testid="add-product-submit" type="submit" disabled={savingProduct} className="btn-primary" style={{ width: '100%', padding: '14px 0', fontSize: 15, marginTop: 8 }}>
-                  {savingProduct ? 'Submitting...' : 'Submit Product for Review'}
+                  {savingProduct ? (editProductId ? 'Updating...' : 'Submitting...') : (editProductId ? 'Update Product' : 'Submit Product for Review')}
                 </button>
               </form>
             </div>
