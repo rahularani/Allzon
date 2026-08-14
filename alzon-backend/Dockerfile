@@ -51,4 +51,4 @@ COPY --from=builder /app/prisma/seed.js ./prisma/
 EXPOSE 3000
 
 # Start command
-CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && npm run start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && if [ \"$RUN_SEED\" = \"true\" ]; then node prisma/seed.js; fi && npm run start"]

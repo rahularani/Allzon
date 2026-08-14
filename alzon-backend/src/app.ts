@@ -96,7 +96,7 @@ app.get(['/', '/api/v1'], (_req: Request, res: Response) => {
       name: 'ALLZON Centralized B2B Wholesale Marketplace API',
       version: '1.0.0',
       status: 'active',
-      documentation: 'http://localhost:3000/health',
+      documentation: '/health',
       endpoints: {
         health: '/health',
         auth: '/api/v1/auth',

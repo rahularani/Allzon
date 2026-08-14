@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import Logo from './Logo';
 
 export default function Footer() {
+  const supplierUrl = import.meta.env.VITE_SUPPLIER_APP_URL;
+
   return (
     <footer style={{ background: '#0F1C2E', color: '#94A3B8', marginTop: 40 }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '48px 24px 32px' }}>
@@ -34,14 +36,16 @@ export default function Footer() {
           </div>
 
           {/* For Suppliers */}
-          <div>
-            <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#FFFFFF', marginBottom: 16 }}>For Suppliers</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              <a href="http://localhost:5174" target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Sell on Allzon</a>
-              <a href="http://localhost:5174" target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Supplier Registration</a>
-              <a href="http://localhost:5174" target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Supplier Dashboard</a>
+          {supplierUrl && (
+            <div>
+              <h4 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#FFFFFF', marginBottom: 16 }}>For Suppliers</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                <a href={supplierUrl} target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Sell on Allzon</a>
+                <a href={supplierUrl} target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Supplier Registration</a>
+                <a href={supplierUrl} target="_blank" rel="noreferrer" style={{ color: '#64748B', fontSize: 13, textDecoration: 'none' }}>Supplier Dashboard</a>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* For Buyers */}
           <div>

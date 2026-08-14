@@ -18,6 +18,9 @@ export default function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const supplierUrl = import.meta.env.VITE_SUPPLIER_APP_URL;
+  const adminUrl = import.meta.env.VITE_ADMIN_APP_URL;
+
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 100, background: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
       {/* Top Banner */}
@@ -25,13 +28,17 @@ export default function Navbar() {
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <span>🇮🇳 India's B2B Wholesale Marketplace · Connecting Verified Manufacturers & Buyers</span>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="http://localhost:5174" target="_blank" rel="noreferrer" style={{ color: '#F97316', fontWeight: 600, textDecoration: 'none' }}>
-              Supplier Portal ↗
-            </a>
-            <span style={{ color: '#334155' }}>|</span>
-            <a href="http://localhost:5175" target="_blank" rel="noreferrer" style={{ color: '#94A3B8', textDecoration: 'none' }}>
-              Admin Console ↗
-            </a>
+            {supplierUrl && (
+              <a href={supplierUrl} target="_blank" rel="noreferrer" style={{ color: '#F97316', fontWeight: 600, textDecoration: 'none' }}>
+                Supplier Portal ↗
+              </a>
+            )}
+            {supplierUrl && adminUrl && <span style={{ color: '#334155' }}>|</span>}
+            {adminUrl && (
+              <a href={adminUrl} target="_blank" rel="noreferrer" style={{ color: '#94A3B8', textDecoration: 'none' }}>
+                Admin Console ↗
+              </a>
+            )}
           </div>
         </div>
       </div>
