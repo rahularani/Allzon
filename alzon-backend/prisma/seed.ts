@@ -177,8 +177,10 @@ async function main() {
   const subTshirts = catFashion.subcategories.find((s) => s.slug === 't-shirts-polos')!;
 
   // 7. Products
-  const prod1 = await prisma.product.create({
-    data: {
+  const prod1 = await prisma.product.upsert({
+    where: { slug: 'premium-cotton-round-neck-t-shirt' },
+    update: {},
+    create: {
       supplierId: supplier1User.supplierProfile!.id,
       categoryId: catFashion.id,
       subcategoryId: subTshirts.id,
@@ -217,8 +219,10 @@ async function main() {
     },
   });
 
-  const prod2 = await prisma.product.create({
-    data: {
+  const prod2 = await prisma.product.upsert({
+    where: { slug: 'cotton-polo-shirt-corporate' },
+    update: {},
+    create: {
       supplierId: supplier1User.supplierProfile!.id,
       categoryId: catFashion.id,
       subcategoryId: subTshirts.id,
@@ -258,18 +262,25 @@ async function main() {
   console.log('📦 Sample products created:', prod1.name, ',', prod2.name);
 
   // 8. Sample Enquiry
-  const enquiry = await prisma.enquiry.create({
-    data: {
-      buyerId: buyerUser.buyerProfile!.id,
-      supplierId: supplier1User.supplierProfile!.id,
-      productId: prod1.id,
-      quantity: '500 Pieces',
-      deliveryLocation: 'Mumbai, Maharashtra',
-      additionalRequirement: 'Need custom logo printing on left chest. Please quote best price.',
-      status: 'NEW',
-    },
+  let enquiry = await prisma.enquiry.findFirst({
+    where: { buyerId: buyerUser.buyerProfile!.id, productId: prod1.id },
   });
-  console.log('📋 Sample enquiry created:', enquiry.id);
+  if (!enquiry) {
+    enquiry = await prisma.enquiry.create({
+      data: {
+        buyerId: buyerUser.buyerProfile!.id,
+        supplierId: supplier1User.supplierProfile!.id,
+        productId: prod1.id,
+        quantity: '500 Pieces',
+        deliveryLocation: 'Mumbai, Maharashtra',
+        additionalRequirement: 'Need custom logo printing on left chest. Please quote best price.',
+        status: 'NEW',
+      },
+    });
+    console.log('📋 Sample enquiry created:', enquiry.id);
+  } else {
+    console.log('📋 Sample enquiry already exists:', enquiry.id);
+  }
 
   console.log('\n✅ Database seed completed successfully!');
 }
