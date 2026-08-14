@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
   const { user, isInitializing, logout } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const isAdmin = user?.role === 'ADMIN';
   const isStaff = user?.role === 'VERIFICATION_STAFF';
@@ -13,7 +15,7 @@ export default function AdminDashboardPage() {
   // Active tab state
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const activeTab = searchParams.get('tab') || 'stats';
+  const activeTab = searchParams.get('tab') || (isStaff ? 'verification' : 'stats');
   
   const setActiveTab = (tab: string) => {
     setSearchParams(prev => {
@@ -23,13 +25,6 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [verifications, setVerifications] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -43,106 +38,119 @@ export default function AdminDashboardPage() {
     }
   }, [user, isInitializing, navigate]);
 
-  useEffect(() => {
-    if (isInitializing || !user) return;
+  const { data: stats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['adminStats'],
+    queryFn: async () => (await api.get('/admin/dashboard/stats')).data.data,
+    enabled: !!user && !isInitializing && isAdmin,
+  });
 
-    // Default staff to verification queue tab
-    if (isStaff && activeTab === 'stats') {
-      setActiveTab('verification');
-    }
+  const { data: users = [], isLoading: isUsersLoading } = useQuery({
+    queryKey: ['adminUsers'],
+    queryFn: async () => (await api.get('/admin/users')).data.data || [],
+    enabled: !!user && !isInitializing && isAdmin,
+  });
 
-    async function loadAdminData() {
-      try {
-        setLoading(true);
-        if (isAdmin) {
-          const [statsRes, usersRes, verifRes, prodRes, catRes, auditRes] = await Promise.all([
-            api.get('/admin/dashboard/stats'),
-            api.get('/admin/users'),
-            api.get('/verification/queue'),
-            api.get('/admin/products'),
-            api.get('/categories'),
-            api.get('/admin/audit-logs'),
-          ]);
-          setStats(statsRes.data.data);
-          setUsers(usersRes.data.data || []);
-          setVerifications(verifRes.data.data || []);
-          setProducts(prodRes.data.data || []);
-          setCategories(catRes.data.data || []);
-          setAuditLogs(auditRes.data.data || []);
-        } else {
-          // Verification Staff only loads verification queue & pending products
-          const [verifRes, prodRes] = await Promise.all([
-            api.get('/verification/queue'),
-            api.get('/admin/products'),
-          ]);
-          setVerifications(verifRes.data.data || []);
-          setProducts(prodRes.data.data || []);
-        }
-      } catch (err) {
-        console.error('Failed to load admin data', err);
-        setErrorMsg('Failed to load admin dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadAdminData();
-  }, [user, navigate, isAdmin, isStaff, activeTab]);
+  const { data: verifications = [], isLoading: isVerifLoading } = useQuery({
+    queryKey: ['adminVerifications'],
+    queryFn: async () => (await api.get('/verification/queue')).data.data || [],
+    enabled: !!user && !isInitializing && (isAdmin || isStaff),
+  });
+
+  const { data: products = [], isLoading: isProdLoading } = useQuery({
+    queryKey: ['adminProducts'],
+    queryFn: async () => (await api.get('/admin/products')).data.data || [],
+    enabled: !!user && !isInitializing && (isAdmin || isStaff),
+  });
+
+  const { data: categories = [], isLoading: isCatLoading } = useQuery({
+    queryKey: ['adminCategories'],
+    queryFn: async () => (await api.get('/categories')).data.data || [],
+    enabled: !!user && !isInitializing && isAdmin,
+  });
+
+  const { data: auditLogs = [], isLoading: isAuditLoading } = useQuery({
+    queryKey: ['adminAuditLogs'],
+    queryFn: async () => (await api.get('/admin/audit-logs')).data.data || [],
+    enabled: !!user && !isInitializing && isAdmin,
+  });
+
+  const loading = isStatsLoading || isUsersLoading || isVerifLoading || isProdLoading || isCatLoading || isAuditLoading;
 
   // Actions
-  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
-    try {
-      setErrorMsg('');
-      const action = currentStatus ? 'suspend' : 'activate';
+  const toggleUserMutation = useMutation({
+    mutationFn: async ({ userId, action }: { userId: string, action: string }) => {
       await api.put(`/admin/users/${userId}/${action}`);
-      setMessage(`User account ${action}d successfully`);
-
-      const usersRes = await api.get('/admin/users');
-      setUsers(usersRes.data.data || []);
-    } catch (err: any) {
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      setMessage(`User account ${variables.action}d successfully`);
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || 'Failed to toggle user status');
     }
+  });
+
+  const handleToggleUserStatus = (userId: string, currentStatus: boolean) => {
+    setErrorMsg('');
+    const action = currentStatus ? 'suspend' : 'activate';
+    toggleUserMutation.mutate({ userId, action });
   };
 
-  const handleReviewVerification = async (supplierId: string, status: string) => {
-    try {
-      setErrorMsg('');
+  const reviewVerifMutation = useMutation({
+    mutationFn: async ({ supplierId, status }: { supplierId: string, status: string }) => {
       await api.put(`/verification/${supplierId}/review`, { status, reviewNote: `Status updated to ${status} by admin` });
-      setMessage(`Supplier verification set to ${status}`);
-
-      const verifRes = await api.get('/verification/queue');
-      setVerifications(verifRes.data.data || []);
-    } catch (err: any) {
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['adminVerifications'] });
+      setMessage(`Supplier verification set to ${variables.status}`);
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || 'Failed to review verification');
     }
+  });
+
+  const handleReviewVerification = (supplierId: string, status: string) => {
+    setErrorMsg('');
+    reviewVerifMutation.mutate({ supplierId, status });
   };
 
-  const handleReviewProduct = async (productId: string, status: string) => {
-    try {
-      setErrorMsg('');
+  const reviewProdMutation = useMutation({
+    mutationFn: async ({ productId, status }: { productId: string, status: string }) => {
       await api.put(`/admin/products/${productId}/review`, { status });
-      setMessage(`Product status set to ${status}`);
-
-      const prodRes = await api.get('/admin/products');
-      setProducts(prodRes.data.data || []);
-    } catch (err: any) {
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+      setMessage(`Product status set to ${variables.status}`);
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || 'Failed to review product');
     }
+  });
+
+  const handleReviewProduct = (productId: string, status: string) => {
+    setErrorMsg('');
+    reviewProdMutation.mutate({ productId, status });
   };
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setErrorMsg('');
+  const createCatMutation = useMutation({
+    mutationFn: async () => {
       await api.post('/categories', { name: newCatName, description: newCatDesc });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCategories'] });
       setMessage('Category created successfully');
       setNewCatName('');
       setNewCatDesc('');
-
-      const catRes = await api.get('/categories');
-      setCategories(catRes.data.data || []);
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || 'Failed to create category');
     }
+  });
+
+  const handleCreateCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    createCatMutation.mutate();
   };
 
   if (!user) return null;
@@ -153,13 +161,13 @@ export default function AdminDashboardPage() {
         { key: 'stats', label: 'Dashboard Stats', icon: '📊' },
         { key: 'users', label: 'User Management', icon: '👥', count: users.length },
         { key: 'verification', label: 'Supplier Verification Queue', icon: '🛡️', count: verifications.length },
-        { key: 'products', label: 'Product Moderation', icon: '📦', count: products.filter((p) => p.status === 'PENDING').length },
+        { key: 'products', label: 'Product Moderation', icon: '📦', count: products.filter((p: any) => p.status === 'PENDING').length },
         { key: 'categories', label: 'Category Management', icon: '🗂️', count: categories.length },
         { key: 'audit', label: 'Audit Logs', icon: '📜', count: auditLogs.length },
       ]
     : [
         { key: 'verification', label: 'Supplier Verification Queue', icon: '🛡️', count: verifications.length },
-        { key: 'products', label: 'Product Moderation', icon: '📦', count: products.filter((p) => p.status === 'PENDING').length },
+        { key: 'products', label: 'Product Moderation', icon: '📦', count: products.filter((p: any) => p.status === 'PENDING').length },
       ];
 
   return (
@@ -295,7 +303,7 @@ export default function AdminDashboardPage() {
                     <span>Status</span>
                     <span>Action</span>
                   </div>
-                  {users.map((u) => (
+                  {users.map((u: any) => (
                     <div key={u.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
                       <div>
                         <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.phone}</div>
@@ -343,7 +351,7 @@ export default function AdminDashboardPage() {
                </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {verifications.map((v) => (
+                {verifications.map((v: any) => (
                   <div key={v.id} className="card" style={{ padding: 24, borderLeft: v.verificationStatus === 'UNDER_REVIEW' ? '4px solid #F59E0B' : '4px solid #E2E8F0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
                       <div>
@@ -414,7 +422,7 @@ export default function AdminDashboardPage() {
                     <span>Status</span>
                     <span>Moderation Action</span>
                   </div>
-                  {products.map((p) => (
+                  {products.map((p: any) => (
                     <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
                       <div>
                         <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{p.name}</div>
@@ -463,7 +471,7 @@ export default function AdminDashboardPage() {
             
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Existing Categories</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-              {categories.map((c) => (
+              {categories.map((c: any) => (
                 <div key={c.id} className="card" style={{ padding: 16, borderLeft: '4px solid #1B3A6B' }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: '#0F172A', marginBottom: 6 }}>{c.name}</div>
                   {c.description && <div style={{ fontSize: 13, color: '#64748B' }}>{c.description}</div>}
@@ -490,7 +498,7 @@ export default function AdminDashboardPage() {
                     <span>Performed By</span>
                     <span>Details</span>
                   </div>
-                  {auditLogs.map((log) => (
+                  {auditLogs.map((log: any) => (
                     <div key={log.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'flex-start', fontSize: 13 }}>
                       <span style={{ color: '#64748B' }}>{new Date(log.createdAt).toLocaleString()}</span>
                       <span style={{ fontWeight: 700, color: '#DC2626' }}>{log.action}</span>

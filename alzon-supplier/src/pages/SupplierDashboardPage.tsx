@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
@@ -10,6 +11,8 @@ export default function SupplierDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeTab = searchParams.get('tab') || 'overview';
   
+  const queryClient = useQueryClient();
+
   const setActiveTab = (tab: string) => {
     setSearchParams(prev => {
       const newParams = new URLSearchParams(prev);
@@ -18,11 +21,32 @@ export default function SupplierDashboardPage() {
     });
   };
 
-  const [supplierProfile, setSupplierProfile] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [enquiries, setEnquiries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: supplierProfile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ['supplierProfile'],
+    queryFn: async () => (await api.get('/suppliers/profile/me')).data.data,
+    enabled: !!user && !isInitializing,
+  });
+
+  const { data: products = [], isLoading: isProductsLoading } = useQuery({
+    queryKey: ['supplierProducts'],
+    queryFn: async () => (await api.get('/products/supplier/mine')).data.data || [],
+    enabled: !!user && !isInitializing,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => (await api.get('/categories')).data.data || [],
+    enabled: !!user && !isInitializing,
+  });
+
+  const { data: enquiries = [], isLoading: isEnquiriesLoading } = useQuery({
+    queryKey: ['supplierEnquiries'],
+    queryFn: async () => (await api.get('/enquiries/supplier/received')).data.data || [],
+    enabled: !!user && !isInitializing,
+    refetchInterval: 15000,
+  });
+
+  const loading = isProfileLoading || isProductsLoading || isEnquiriesLoading;
 
   // Product Form State
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -34,7 +58,12 @@ export default function SupplierDashboardPage() {
   const [prodDesc, setProdDesc] = useState('');
   const [prodImages, setProdImages] = useState<FileList | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [savingProduct, setSavingProduct] = useState(false);
+
+  useEffect(() => {
+    if (categories.length > 0 && !prodCatId) {
+      setProdCatId(categories[0].id);
+    }
+  }, [categories, prodCatId]);
 
   const resetForm = () => {
     setEditProductId(null);
@@ -51,98 +80,66 @@ export default function SupplierDashboardPage() {
   // Verification Doc Upload State
   const [docType, setDocType] = useState('GST_CERTIFICATE');
   const [docFile, setDocFile] = useState<File | null>(null);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const [message, setMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (isInitializing) return;
-    if (!user) {
+    if (!isInitializing && !user) {
       navigate('/login');
-      return;
     }
-
-    async function loadData() {
-      try {
-        const [profileRes, prodRes, catRes, enqRes] = await Promise.all([
-          api.get('/suppliers/profile/me'),
-          api.get('/products/supplier/mine'),
-          api.get('/categories'),
-          api.get('/enquiries/supplier/received'),
-        ]);
-
-        setSupplierProfile(profileRes.data.data);
-        setProducts(prodRes.data.data || []);
-        setCategories(catRes.data.data || []);
-        setEnquiries(enqRes.data.data || []);
-        
-        if (catRes.data.data?.length > 0) {
-          setProdCatId(catRes.data.data[0].id);
-        }
-      } catch (err) {
-        console.error('Failed to load supplier dashboard', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
   }, [user, isInitializing, navigate]);
 
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingProduct(true);
-    setMessage('');
-    setErrorMsg('');
-
-    try {
-      const payload = {
-        name: prodName,
-        categoryId: prodCatId,
-        priceMin: parseFloat(prodPriceMin) || 100,
-        priceMax: parseFloat(prodPriceMax) || 150,
-        moq: parseInt(prodMoq, 10) || 50,
-        description: prodDesc,
-      };
-
+  const saveProductMutation = useMutation({
+    mutationFn: async (payload: any) => {
       let productId = editProductId;
-
       if (editProductId) {
-        await api.put(`/products/${editProductId}`, payload);
+        await api.put(`/products/${editProductId}`, payload.data);
       } else {
-        const productRes = await api.post('/products', payload);
+        const productRes = await api.post('/products', payload.data);
         productId = productRes.data.data.id;
       }
 
-      // 2. Upload images if selected
-      if (prodImages && prodImages.length > 0) {
+      if (payload.images && payload.images.length > 0) {
         const formData = new FormData();
-        Array.from(prodImages).forEach(file => {
+        Array.from(payload.images as FileList).forEach(file => {
           formData.append('images', file);
         });
-
         await api.post(`/products/${productId}/images`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
-
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierProducts'] });
       setMessage(editProductId ? 'Product updated successfully! 🎉' : 'Product submitted successfully! 🎉');
       resetForm();
-
-      // Refresh product list
-      const prodListRes = await api.get('/products/supplier/mine');
-      setProducts(prodListRes.data.data || []);
-      
       setTimeout(() => {
         setActiveTab('products');
         setMessage('');
       }, 2000);
-      
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || (editProductId ? 'Failed to update product' : 'Failed to add product'));
-    } finally {
-      setSavingProduct(false);
     }
+  });
+
+  const savingProduct = saveProductMutation.isPending;
+
+  const handleAddProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage('');
+    setErrorMsg('');
+
+    const payload = {
+      name: prodName,
+      categoryId: prodCatId,
+      priceMin: parseFloat(prodPriceMin) || 100,
+      priceMax: parseFloat(prodPriceMax) || 150,
+      moq: parseInt(prodMoq, 10) || 50,
+      description: prodDesc,
+    };
+    saveProductMutation.mutate({ data: payload, images: prodImages });
   };
 
   const handleEditClick = (product: any) => {
@@ -158,61 +155,72 @@ export default function SupplierDashboardPage() {
     setActiveTab('add_product');
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    
-    try {
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
       await api.delete(`/products/${productId}`);
-      const prodListRes = await api.get('/products/supplier/mine');
-      setProducts(prodListRes.data.data || []);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierProducts'] });
       setMessage('Product deleted successfully.');
       setTimeout(() => setMessage(''), 3000);
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       setErrorMsg(err.response?.data?.message || 'Failed to delete product');
       setTimeout(() => setErrorMsg(''), 3000);
     }
+  });
+
+  const handleDeleteProduct = (productId: string) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    deleteProductMutation.mutate(productId);
   };
 
-  const handleUploadDocument = async (e: React.FormEvent) => {
+  const uploadDocMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      await api.post('/verification/documents', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierProfile'] });
+      setMessage('Verification document uploaded! Status updated to Under Review.');
+      setDocFile(null);
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.response?.data?.message || 'Upload failed');
+    }
+  });
+
+  const uploadingDoc = uploadDocMutation.isPending;
+
+  const handleUploadDocument = (e: React.FormEvent) => {
     e.preventDefault();
     if (!docFile) {
       setErrorMsg('Please select a document to upload');
       return;
     }
-
-    setUploadingDoc(true);
     setMessage('');
     setErrorMsg('');
-
     const formData = new FormData();
     formData.append('documentType', docType);
     formData.append('document', docFile);
-
-    try {
-      await api.post('/verification/documents', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      setMessage('Verification document uploaded! Status updated to Under Review.');
-      setDocFile(null);
-      
-      const profileRes = await api.get('/suppliers/profile/me');
-      setSupplierProfile(profileRes.data.data);
-    } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Upload failed');
-    } finally {
-      setUploadingDoc(false);
-    }
+    uploadDocMutation.mutate(formData);
   };
 
-  const handleUpdateEnquiryStatus = async (enquiryId: string, status: string) => {
-    try {
+  const updateEnquiryStatusMutation = useMutation({
+    mutationFn: async ({ enquiryId, status }: { enquiryId: string; status: string }) => {
       await api.put(`/enquiries/${enquiryId}/status`, { status });
-      const enqRes = await api.get('/enquiries/supplier/received');
-      setEnquiries(enqRes.data.data || []);
-    } catch (err) {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplierEnquiries'] });
+    },
+    onError: (err) => {
       console.error('Failed to update status', err);
     }
+  });
+
+  const handleUpdateEnquiryStatus = (enquiryId: string, status: string) => {
+    updateEnquiryStatusMutation.mutate({ enquiryId, status });
   };
 
   if (isInitializing) {
@@ -394,7 +402,7 @@ export default function SupplierDashboardPage() {
                   <span>Status</span>
                   <span>Actions</span>
                 </div>
-                {products.map((p) => (
+                {products.map((p: any) => (
                   <div key={p.id} className="table-row grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr] items-start md:items-center gap-4 md:gap-0" style={{ padding: '16px 24px', borderBottom: '1px solid #F1F5F9', fontSize: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
                       {p.images && p.images.length > 0 ? (
@@ -454,7 +462,7 @@ export default function SupplierDashboardPage() {
                   <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 8 }}>Category *</label>
                   <select className="input-base" value={prodCatId} onChange={(e) => setProdCatId(e.target.value)} required>
                     <option value="" disabled>Select a category</option>
-                    {categories.map((c) => (
+                    {categories.map((c: any) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -522,7 +530,7 @@ export default function SupplierDashboardPage() {
                     <span>Status</span>
                     <span>Action</span>
                   </div>
-                  {enquiries.map((enq) => (
+                  {enquiries.map((enq: any) => (
                     <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
                       <div>
                         <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{enq.buyer?.fullName}</div>

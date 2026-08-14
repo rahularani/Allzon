@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
@@ -9,6 +10,8 @@ export default function BuyerDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeSection = searchParams.get('section') || 'enquiries';
+  
+  const queryClient = useQueryClient();
 
   const setActiveSection = (section: string) => {
     setSearchParams(prev => {
@@ -17,50 +20,51 @@ export default function BuyerDashboard() {
       return newParams;
     });
   };
-  const [enquiries, setEnquiries] = useState<any[]>([]);
-  const [wishlist, setWishlist] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
+  const { data: enquiries = [], isLoading: isEnquiriesLoading, isError: isEnqError } = useQuery({
+    queryKey: ['buyerEnquiries'],
+    queryFn: async () => (await api.get('/enquiries/buyer/mine')).data.data || [],
+    enabled: !!user && !isInitializing,
+    refetchInterval: 15000,
+  });
+
+  const { data: wishlist = [], isLoading: isWishlistLoading, isError: isWishError } = useQuery({
+    queryKey: ['buyerWishlist'],
+    queryFn: async () => (await api.get('/wishlist')).data.data || [],
+    enabled: !!user && !isInitializing,
+  });
+
+  const { data: notifications = [], isLoading: isNotifLoading, isError: isNotifError } = useQuery({
+    queryKey: ['buyerNotifications'],
+    queryFn: async () => (await api.get('/notifications')).data.data?.notifications || [],
+    enabled: !!user && !isInitializing,
+  });
+
+  const loading = isEnquiriesLoading || isWishlistLoading || isNotifLoading;
+  const error = (isEnqError || isWishError || isNotifError) ? 'Failed to load dashboard data. Please try again.' : null;
 
   useEffect(() => {
-    if (isInitializing) return;
-    if (!user) {
+    if (!isInitializing && !user) {
       navigate('/login');
-      return;
     }
-
-    async function fetchDashboardData() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [enqRes, wishRes, notifRes] = await Promise.all([
-          api.get('/enquiries/buyer/mine'),
-          api.get('/wishlist'),
-          api.get('/notifications'),
-        ]);
-        setEnquiries(enqRes.data.data || []);
-        setWishlist(wishRes.data.data || []);
-        setNotifications(notifRes.data.data?.notifications || []);
-      } catch (err: any) {
-        console.error('Failed to fetch dashboard data', err);
-        setError('Failed to load dashboard data. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchDashboardData();
   }, [user, isInitializing, navigate]);
 
-  const handleRemoveWishlist = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
+  const removeWishlistMutation = useMutation({
+    mutationFn: async (id: string) => {
       await api.delete(`/wishlist/${id}`);
-      setWishlist(wishlist.filter(item => item.id !== id));
-    } catch (err) {
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['buyerWishlist'] });
+    },
+    onError: (err) => {
       console.error('Failed to remove item', err);
     }
+  });
+
+  const handleRemoveWishlist = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeWishlistMutation.mutate(id);
   };
 
   if (isInitializing) {
@@ -98,7 +102,7 @@ export default function BuyerDashboard() {
           {[
             { key: 'enquiries', label: 'My Enquiries', icon: '📋', count: enquiries.length },
             { key: 'wishlist', label: 'Saved Items', icon: '❤️', count: wishlist.length },
-            { key: 'notifications', label: 'Notifications', icon: '🔔', count: notifications.filter((n) => !n.isRead).length },
+            { key: 'notifications', label: 'Notifications', icon: '🔔', count: notifications.filter((n: any) => !n.isRead).length },
           ].map((item) => (
             <div
               key={item.key}
@@ -175,7 +179,7 @@ export default function BuyerDashboard() {
                     <span>Date Submitted</span>
                     <span>Status</span>
                   </div>
-                  {enquiries.map((enq) => (
+                  {enquiries.map((enq: any) => (
                     <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 1fr', padding: '16px 20px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
                       <span style={{ fontWeight: 600, color: '#0F172A' }}>{enq.supplier?.businessName}</span>
                       <span style={{ color: '#334155' }}>{enq.product?.name || 'General Requirement'}</span>
@@ -206,7 +210,7 @@ export default function BuyerDashboard() {
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-                {wishlist.map((item) => (
+                {wishlist.map((item: any) => (
                   <Link 
                     to={item.itemType === 'PRODUCT' ? `/products/${item.product?.slug}` : `/suppliers/${item.supplier?.slug}`} 
                     key={item.id} 
@@ -251,7 +255,7 @@ export default function BuyerDashboard() {
                   <p style={{ color: '#64748B', fontSize: 14, margin: 0 }}>No new notifications.</p>
                 </div>
               ) : (
-                notifications.map((n) => (
+                notifications.map((n: any) => (
                   <div key={n.id} style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', background: n.isRead ? '#FFFFFF' : '#FEF3C7' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: '#0F172A', marginBottom: 6 }}>{n.title}</div>

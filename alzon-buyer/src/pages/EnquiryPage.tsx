@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useAuthStore } from '../store/authStore';
 
@@ -7,6 +8,7 @@ export default function EnquiryPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, isInitializing } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const productId = searchParams.get('productId') || '';
   const supplierId = searchParams.get('supplierId') || '';
@@ -14,46 +16,46 @@ export default function EnquiryPage() {
   const [quantity, setQuantity] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [additionalRequirement, setAdditionalRequirement] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<any>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isInitializing) return;
-    if (!user) {
+    if (!isInitializing && !user) {
       navigate('/login');
     }
   }, [user, isInitializing, navigate]);
 
-  if (isInitializing) {
-    return <div style={{ padding: 60, textAlign: 'center', color: '#64748B' }}>Loading...</div>;
-  }
+  const submitEnquiryMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await api.post('/enquiries', payload);
+      return res.data.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['buyerEnquiries'] });
+      setSubmitted(data);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || 'Failed to submit enquiry');
+    }
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submitting = submitEnquiryMutation.isPending;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quantity || !deliveryLocation) {
       setError('Please fill in quantity and delivery location');
       return;
     }
-
-    setSubmitting(true);
     setError('');
 
-    try {
-      const res = await api.post('/enquiries', {
-        supplierId,
-        productId: productId || undefined,
-        quantity,
-        deliveryLocation,
-        additionalRequirement,
-      });
-
-      setSubmitted(res.data.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit enquiry');
-    } finally {
-      setSubmitting(false);
-    }
+    submitEnquiryMutation.mutate({
+      supplierId,
+      productId: productId || undefined,
+      quantity,
+      deliveryLocation,
+      additionalRequirement,
+    });
   };
 
   if (submitted) {
