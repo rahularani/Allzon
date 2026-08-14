@@ -22,6 +22,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import adminRoutes from './modules/admin/admin.routes';
 
 const app: Application = express();
+app.set('trust proxy', 1);
 
 // ─── Security Headers ────────────────────────────────────────────────────────
 app.use(
