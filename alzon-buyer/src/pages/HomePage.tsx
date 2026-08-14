@@ -45,8 +45,8 @@ export default function HomePage() {
           <span style={{ display: 'inline-block', background: 'rgba(249, 115, 22, 0.15)', color: '#F97316', border: '1px solid rgba(249, 115, 22, 0.3)', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>
             ✨ India's Premier B2B Sourcing Platform
           </span>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: 16, color: '#FFFFFF' }}>
-            Source Directly from Verified <br />
+          <h1 className="text-3xl md:text-[42px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: 16, color: '#FFFFFF' }}>
+            Source Directly from Verified <br className="hidden md:block" />
             <span style={{ color: '#F97316' }}>Indian Manufacturers & Wholesalers</span>
           </h1>
           <p style={{ fontSize: 16, color: '#94A3B8', maxWidth: 640, margin: '0 auto 36px', lineHeight: 1.6 }}>

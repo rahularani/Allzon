@@ -8,6 +8,7 @@ export default function Navbar() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +51,17 @@ export default function Navbar() {
           <Logo height={38} />
         </Link>
 
+        {/* Hamburger Button (Mobile Only) */}
+        <button
+          className="md:hidden"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', padding: '4px' }}
+        >
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+
         {/* Search Bar */}
-        <form onSubmit={handleSearch} style={{ flex: '1 1 200px', maxWidth: 480, display: 'flex', position: 'relative' }}>
+        <form onSubmit={handleSearch} className="w-full md:w-auto md:flex-1 order-3 md:order-none mt-2 md:mt-0" style={{ maxWidth: 480, display: 'flex', position: 'relative' }}>
           <input
             type="text"
             className="input-base"
@@ -66,7 +76,7 @@ export default function Navbar() {
         </form>
 
         {/* Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+        <nav className="hidden md:flex" style={{ alignItems: 'center', gap: 20 }}>
           <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Home</Link>
           <Link to="/products" className={`nav-link ${isActive('/products') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Products</Link>
           <Link to="/categories" className={`nav-link ${isActive('/categories') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Categories</Link>
@@ -88,6 +98,33 @@ export default function Navbar() {
           )}
         </nav>
       </div>
+
+      {/* Mobile Menu Panel */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden" style={{ padding: '16px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className={`nav-link ${isActive('/') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Home</Link>
+          <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className={`nav-link ${isActive('/products') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Products</Link>
+          <Link to="/categories" onClick={() => setIsMobileMenuOpen(false)} className={`nav-link ${isActive('/categories') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Categories</Link>
+          <Link to="/suppliers" onClick={() => setIsMobileMenuOpen(false)} className={`nav-link ${isActive('/suppliers') ? 'active' : ''}`} style={{ textDecoration: 'none' }}>Suppliers</Link>
+          
+          <div style={{ height: 1, background: '#E2E8F0', margin: '4px 0' }} />
+          
+          {user ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 14px', fontSize: 13, justifyContent: 'center' }}>
+                👤 {user.buyerProfile?.fullName || 'My Account'}
+              </Link>
+              <button onClick={() => { setIsMobileMenuOpen(false); logout(); }} className="btn-ghost" style={{ padding: '10px 12px', fontSize: 13, justifyContent: 'center' }}>
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="btn-primary" style={{ textDecoration: 'none', padding: '10px 16px', fontSize: 13, justifyContent: 'center' }}>
+              Login / Register
+            </Link>
+          )}
+        </div>
+      )}
     </header>
   );
 }

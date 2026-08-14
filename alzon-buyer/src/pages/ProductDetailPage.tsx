@@ -86,9 +86,9 @@ export default function ProductDetailPage() {
         <span style={{ color: '#0F172A', fontWeight: 600 }}>{product.name}</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32 }}>
         {/* Images Column */}
-        <div style={{ flex: 1, minWidth: 300 }}>
+        <div style={{ flex: 1, minWidth: 280 }}>
           <div className="card" style={{ overflow: 'hidden', marginBottom: 16 }}>
             <img
               src={images[selectedImgIndex]?.url}
@@ -119,8 +119,8 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Product Info Column */}
-        <div style={{ flex: 1.5, minWidth: 300 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1.5, minWidth: 280 }}>
+          <div className="flex-col md:flex-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             <div>
               {product.supplier?.verificationStatus === 'VERIFIED' && (
                 <span className="verified-badge" style={{ marginBottom: 10, display: 'inline-block' }}>✓ Verified Sourcing</span>
@@ -231,7 +231,7 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Supplier Info Sidebar Card */}
-        <div style={{ flex: 1, minWidth: 300 }}>
+        <div style={{ flex: 1, minWidth: 280 }}>
           <div className="card" style={{ padding: 24, position: 'sticky', top: 100 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Sold By</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>

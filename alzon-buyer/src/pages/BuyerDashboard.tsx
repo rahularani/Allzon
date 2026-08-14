@@ -7,6 +7,7 @@ export default function BuyerDashboard() {
   const navigate = useNavigate();
   const { user, isInitializing, logout } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeSection = searchParams.get('section') || 'enquiries';
 
   const setActiveSection = (section: string) => {
@@ -68,9 +69,17 @@ export default function BuyerDashboard() {
   if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', minHeight: 'calc(100vh - 100px)', background: '#F8FAFC' }}>
+    <div className="flex-col md:flex-row" style={{ display: 'flex', minHeight: 'calc(100vh - 100px)', background: '#F8FAFC' }}>
+      {/* Mobile Header (Only visible on mobile) */}
+      <div className="md:hidden flex justify-between items-center p-4 bg-[#0F1C2E] text-white">
+        <div className="font-bold">Buyer Dashboard</div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '20px' }}>
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <aside style={{ width: 260, background: '#0F1C2E', flexShrink: 0, padding: 0 }}>
+      <aside className={`w-full md:w-[260px] shrink-0 ${isMobileMenuOpen ? 'block' : 'hidden md:block'}`} style={{ background: '#0F1C2E', padding: 0 }}>
         <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             <div style={{ width: 48, height: 48, background: '#1B3A6B', border: '2px solid #274d8a', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: '#FFFFFF' }}>
@@ -93,7 +102,7 @@ export default function BuyerDashboard() {
           ].map((item) => (
             <div
               key={item.key}
-              onClick={() => setActiveSection(item.key as any)}
+              onClick={() => { setActiveSection(item.key as any); setIsMobileMenuOpen(false); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -132,7 +141,7 @@ export default function BuyerDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: 40, maxWidth: 1000 }}>
+      <main className="w-full" style={{ flex: 1, padding: '20px md:40px', maxWidth: 1000, overflowX: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#64748B' }}>Loading dashboard data...</div>
         ) : error ? (
@@ -157,27 +166,29 @@ export default function BuyerDashboard() {
                 <Link to="/products" className="btn-primary" style={{ textDecoration: 'none' }}>Browse Products</Link>
               </div>
             ) : (
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 1fr', padding: '16px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Supplier</span>
-                  <span>Product / Subject</span>
-                  <span>Quantity</span>
-                  <span>Date Submitted</span>
-                  <span>Status</span>
-                </div>
-                {enquiries.map((enq) => (
-                  <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 1fr', padding: '16px 20px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
-                    <span style={{ fontWeight: 600, color: '#0F172A' }}>{enq.supplier?.businessName}</span>
-                    <span style={{ color: '#334155' }}>{enq.product?.name || 'General Requirement'}</span>
-                    <span style={{ color: '#475569' }}>{enq.quantity}</span>
-                    <span style={{ color: '#64748B', fontSize: 13 }}>{new Date(enq.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                    <span>
-                      <span className={`badge-${enq.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                        {enq.status}
-                      </span>
-                    </span>
+              <div className="card w-full overflow-x-auto">
+                <div style={{ minWidth: 800 }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 1fr', padding: '16px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Supplier</span>
+                    <span>Product / Subject</span>
+                    <span>Quantity</span>
+                    <span>Date Submitted</span>
+                    <span>Status</span>
                   </div>
-                ))}
+                  {enquiries.map((enq) => (
+                    <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1fr 1fr', padding: '16px 20px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
+                      <span style={{ fontWeight: 600, color: '#0F172A' }}>{enq.supplier?.businessName}</span>
+                      <span style={{ color: '#334155' }}>{enq.product?.name || 'General Requirement'}</span>
+                      <span style={{ color: '#475569' }}>{enq.quantity}</span>
+                      <span style={{ color: '#64748B', fontSize: 13 }}>{new Date(enq.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      <span>
+                        <span className={`badge-${enq.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                          {enq.status}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

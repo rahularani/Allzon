@@ -84,9 +84,9 @@ export default function ProductListingPage() {
   };
 
   return (
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px', display: 'flex', gap: 24, flexDirection: 'row', flexWrap: 'wrap' }}>
+    <div className="flex-col md:flex-row" style={{ maxWidth: 1280, margin: '0 auto', padding: '24px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
       {/* Filter Sidebar */}
-      <aside style={{ width: 260, flexShrink: 0 }}>
+      <aside className="w-full md:w-[260px] shrink-0">
         <div className="card" style={{ overflow: 'hidden', position: 'sticky', top: 100 }}>
           <div style={{ padding: '16px 20px', background: '#1B3A6B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#FFFFFF' }}>Filters</span>

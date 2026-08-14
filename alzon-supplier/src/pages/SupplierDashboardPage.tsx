@@ -7,6 +7,7 @@ export default function SupplierDashboardPage() {
   const navigate = useNavigate();
   const { user, isInitializing, logout } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeTab = searchParams.get('tab') || 'overview';
   
   const setActiveTab = (tab: string) => {
@@ -220,9 +221,17 @@ export default function SupplierDashboardPage() {
   if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', background: '#F8FAFC' }}>
+    <div className="flex-col md:flex-row" style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', background: '#F8FAFC' }}>
+      {/* Mobile Header (Only visible on mobile) */}
+      <div className="md:hidden flex justify-between items-center p-4 bg-[#0F1C2E] text-white">
+        <div className="font-bold">Supplier Dashboard</div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '20px' }}>
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <aside style={{ width: 260, background: '#0F1C2E', color: '#FFFFFF', flexShrink: 0, padding: '24px 0' }}>
+      <aside className={`w-full md:w-[260px] shrink-0 ${isMobileMenuOpen ? 'block' : 'hidden md:block'}`} style={{ background: '#0F1C2E', color: '#FFFFFF', padding: '24px 0' }}>
         <div style={{ padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <h3 data-testid="supplier-business-name" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: '#FFFFFF', margin: '0 0 4px' }}>
             {supplierProfile?.businessName || 'Supplier Console'}
@@ -246,6 +255,7 @@ export default function SupplierDashboardPage() {
                 setActiveTab(item.key as any); 
                 setMessage(''); 
                 setErrorMsg(''); 
+                setIsMobileMenuOpen(false);
                 if (item.key === 'add_product') resetForm();
               }}
               style={{
@@ -286,7 +296,7 @@ export default function SupplierDashboardPage() {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: '32px 40px', maxWidth: 1200 }}>
+      <main className="w-full" style={{ flex: 1, padding: '20px md:40px', maxWidth: 1200, overflowX: 'hidden' }}>
         {message && (
           <div style={{ padding: '16px 20px', background: '#D1FAE5', color: '#065F46', border: '1px solid #34D399', borderRadius: 8, fontSize: 14, fontWeight: 500, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 20 }}>✅</span> {message}
@@ -377,7 +387,7 @@ export default function SupplierDashboardPage() {
               </div>
             ) : (
               <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="table-header hidden md:grid" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   <span>Product Name</span>
                   <span>Price Range</span>
                   <span>MOQ</span>
@@ -385,8 +395,8 @@ export default function SupplierDashboardPage() {
                   <span>Actions</span>
                 </div>
                 {products.map((p) => (
-                  <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div key={p.id} className="table-row grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr] items-start md:items-center gap-4 md:gap-0" style={{ padding: '16px 24px', borderBottom: '1px solid #F1F5F9', fontSize: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
                       {p.images && p.images.length > 0 ? (
                         <img src={p.images[0].url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
                       ) : (
@@ -394,16 +404,23 @@ export default function SupplierDashboardPage() {
                       )}
                       <span style={{ fontWeight: 600, color: '#0F172A' }}>{p.name}</span>
                     </div>
-                    <span style={{ fontWeight: 600, color: '#475569' }}>₹{p.priceMin} - ₹{p.priceMax}</span>
-                    <span style={{ color: '#475569' }}>{p.moq} {p.moqUnit || 'Pcs'}</span>
-                    <span>
+                    <div>
+                      <span className="md:hidden text-xs text-gray-500 block">Price Range</span>
+                      <span style={{ fontWeight: 600, color: '#475569' }}>₹{p.priceMin} - ₹{p.priceMax}</span>
+                    </div>
+                    <div>
+                      <span className="md:hidden text-xs text-gray-500 block">MOQ</span>
+                      <span style={{ color: '#475569' }}>{p.moq} {p.moqUnit || 'Pcs'}</span>
+                    </div>
+                    <div>
+                      <span className="md:hidden text-xs text-gray-500 block mb-1">Status</span>
                       <span className={`badge-${p.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
                         {p.status}
                       </span>
-                    </span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => handleEditClick(p)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, color: '#3B82F6', fontWeight: 600 }}>Edit</button>
-                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, color: '#EF4444', fontWeight: 600 }}>Delete</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: '8px' }}>
+                      <button onClick={() => handleEditClick(p)} style={{ background: '#EEF2FF', padding: '6px 16px', borderRadius: '4px', border: '1px solid #C7D2FE', cursor: 'pointer', fontSize: 14, color: '#3B82F6', fontWeight: 600 }}>Edit</button>
+                      <button onClick={() => handleDeleteProduct(p.id)} style={{ background: '#FEF2F2', padding: '6px 16px', borderRadius: '4px', border: '1px solid #FECACA', cursor: 'pointer', fontSize: 14, color: '#EF4444', fontWeight: 600 }}>Delete</button>
                     </div>
                   </div>
                 ))}
@@ -443,7 +460,7 @@ export default function SupplierDashboardPage() {
                   </select>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 8 }}>Min Price (₹) *</label>
                     <input type="number" className="input-base" placeholder="120" value={prodPriceMin} onChange={(e) => setProdPriceMin(e.target.value)} required min="1" />
@@ -497,42 +514,44 @@ export default function SupplierDashboardPage() {
                  <p style={{ color: '#64748B' }}>When buyers request quotes or information, they'll appear here.</p>
                </div>
             ) : (
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Buyer Details</span>
-                  <span>Requirement</span>
-                  <span>Status</span>
-                  <span>Action</span>
-                </div>
-                {enquiries.map((enq) => (
-                  <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{enq.buyer?.fullName}</div>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>{enq.buyer?.businessName}</div>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>📞 {enq.buyer?.phone}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#334155', marginBottom: 4 }}>{enq.product ? enq.product.name : 'General Enquiry'}</div>
-                      <div style={{ fontSize: 13 }}>Qty: <strong>{enq.quantity}</strong></div>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>📍 {enq.deliveryLocation}</div>
-                    </div>
-                    <span>
-                      <span className={`badge-${enq.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                        {enq.status}
-                      </span>
-                    </span>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {enq.status === 'PENDING' && (
-                        <button onClick={() => handleUpdateEnquiryStatus(enq.id, 'CONTACTED')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12, background: '#FFFFFF' }}>
-                          Mark Contacted
-                        </button>
-                      )}
-                      <button onClick={() => handleUpdateEnquiryStatus(enq.id, 'RESPONDED')} className="btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
-                        Update Status
-                      </button>
-                    </div>
+              <div className="card w-full overflow-x-auto">
+                <div style={{ minWidth: 800 }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Buyer Details</span>
+                    <span>Requirement</span>
+                    <span>Status</span>
+                    <span>Action</span>
                   </div>
-                ))}
+                  {enquiries.map((enq) => (
+                    <div key={enq.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{enq.buyer?.fullName}</div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>{enq.buyer?.businessName}</div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>📞 {enq.buyer?.phone}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#334155', marginBottom: 4 }}>{enq.product ? enq.product.name : 'General Enquiry'}</div>
+                        <div style={{ fontSize: 13 }}>Qty: <strong>{enq.quantity}</strong></div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>📍 {enq.deliveryLocation}</div>
+                      </div>
+                      <span>
+                        <span className={`badge-${enq.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                          {enq.status}
+                        </span>
+                      </span>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {enq.status === 'PENDING' && (
+                          <button onClick={() => handleUpdateEnquiryStatus(enq.id, 'CONTACTED')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12, background: '#FFFFFF' }}>
+                            Mark Contacted
+                          </button>
+                        )}
+                        <button onClick={() => handleUpdateEnquiryStatus(enq.id, 'RESPONDED')} className="btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
+                          Update Status
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -560,7 +579,7 @@ export default function SupplierDashboardPage() {
 
               <h4 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Upload New Document</h4>
               <form onSubmit={handleUploadDocument} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: 16 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 8 }}>Document Type *</label>
                     <select className="input-base" value={docType} onChange={(e) => setDocType(e.target.value)}>

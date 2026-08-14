@@ -12,6 +12,7 @@ export default function AdminDashboardPage() {
 
   // Active tab state
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const activeTab = searchParams.get('tab') || 'stats';
   
   const setActiveTab = (tab: string) => {
@@ -162,9 +163,17 @@ export default function AdminDashboardPage() {
       ];
 
   return (
-    <div style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', background: '#F8FAFC' }}>
+    <div className="flex-col md:flex-row" style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', background: '#F8FAFC' }}>
+      {/* Mobile Header (Only visible on mobile) */}
+      <div className="md:hidden flex justify-between items-center p-4 bg-[#0F1C2E] text-white">
+        <div className="font-bold">{isAdmin ? 'System Admin Console' : 'Verification Staff'}</div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2" style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '20px' }}>
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <aside style={{ width: 280, background: '#0F1C2E', color: '#FFFFFF', flexShrink: 0, padding: '24px 0', borderRight: '1px solid #E2E8F0' }}>
+      <aside className={`w-full md:w-[280px] shrink-0 ${isMobileMenuOpen ? 'block' : 'hidden md:block'}`} style={{ background: '#0F1C2E', color: '#FFFFFF', padding: '24px 0', borderRight: '1px solid #E2E8F0' }}>
         <div style={{ padding: '0 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16, color: '#FFFFFF', margin: '0 0 4px' }}>
             {isAdmin ? 'System Admin Console' : 'Verification Staff'}
@@ -178,7 +187,7 @@ export default function AdminDashboardPage() {
           {menuItems.map((item) => (
             <div
               key={item.key}
-              onClick={() => { setActiveTab(item.key as any); setMessage(''); setErrorMsg(''); }}
+              onClick={() => { setActiveTab(item.key as any); setMessage(''); setErrorMsg(''); setIsMobileMenuOpen(false); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -217,7 +226,7 @@ export default function AdminDashboardPage() {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: '32px 40px', maxWidth: 1400 }}>
+      <main className="w-full" style={{ flex: 1, padding: '20px md:40px', maxWidth: 1400, overflowX: 'hidden' }}>
         {message && (
           <div style={{ padding: '16px 20px', background: '#D1FAE5', color: '#065F46', border: '1px solid #34D399', borderRadius: 8, fontSize: 14, fontWeight: 500, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 20 }}>✅</span> {message}
@@ -240,7 +249,7 @@ export default function AdminDashboardPage() {
             {!stats ? (
               <div className="card" style={{ padding: 40, textAlign: 'center', color: '#EF4444' }}>Stats data unavailable</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ gap: 24 }}>
                 <div className="card" style={{ padding: 24, borderLeft: '4px solid #0F172A' }}>
                   <div style={{ fontSize: 12, color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>TOTAL USERS</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800, color: '#0F172A', marginTop: 8 }}>{stats.totalUsers || 0}</div>
@@ -277,44 +286,46 @@ export default function AdminDashboardPage() {
             {users.length === 0 ? (
                <div className="card" style={{ padding: 60, textAlign: 'center', color: '#64748B' }}>No users found.</div>
             ) : (
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Phone / Email</span>
-                  <span>Role</span>
-                  <span>Profile Info</span>
-                  <span>Status</span>
-                  <span>Action</span>
-                </div>
-                {users.map((u) => (
-                  <div key={u.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.phone}</div>
-                      <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{u.email || 'No email provided'}</div>
-                    </div>
-                    <span>
-                      <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#F1F5F9', color: '#334155' }}>
-                        {u.role}
-                      </span>
-                    </span>
-                    <span style={{ color: '#475569' }}>
-                      {u.buyerProfile?.fullName || u.supplierProfile?.businessName || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Profile not created</span>}
-                    </span>
-                    <span>
-                      <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.isActive ? '#D1FAE5' : '#FEE2E2', color: u.isActive ? '#065F46' : '#991B1B' }}>
-                        {u.isActive ? 'ACTIVE' : 'SUSPENDED'}
-                      </span>
-                    </span>
-                    <div>
-                      <button
-                        onClick={() => handleToggleUserStatus(u.id, u.isActive)}
-                        className="btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: 12, color: u.isActive ? '#EF4444' : '#16A34A', border: `1px solid ${u.isActive ? '#FCA5A5' : '#86EFAC'}`, background: '#FFFFFF' }}
-                      >
-                        {u.isActive ? 'Suspend User' : 'Activate User'}
-                      </button>
-                    </div>
+              <div className="card w-full overflow-x-auto">
+                <div style={{ minWidth: 800 }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Phone / Email</span>
+                    <span>Role</span>
+                    <span>Profile Info</span>
+                    <span>Status</span>
+                    <span>Action</span>
                   </div>
-                ))}
+                  {users.map((u) => (
+                    <div key={u.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#0F172A' }}>{u.phone}</div>
+                        <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{u.email || 'No email provided'}</div>
+                      </div>
+                      <span>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#F1F5F9', color: '#334155' }}>
+                          {u.role}
+                        </span>
+                      </span>
+                      <span style={{ color: '#475569' }}>
+                        {u.buyerProfile?.fullName || u.supplierProfile?.businessName || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Profile not created</span>}
+                      </span>
+                      <span>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: u.isActive ? '#D1FAE5' : '#FEE2E2', color: u.isActive ? '#065F46' : '#991B1B' }}>
+                          {u.isActive ? 'ACTIVE' : 'SUSPENDED'}
+                        </span>
+                      </span>
+                      <div>
+                        <button
+                          onClick={() => handleToggleUserStatus(u.id, u.isActive)}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: 12, color: u.isActive ? '#EF4444' : '#16A34A', border: `1px solid ${u.isActive ? '#FCA5A5' : '#86EFAC'}`, background: '#FFFFFF' }}
+                        >
+                          {u.isActive ? 'Suspend User' : 'Activate User'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -395,35 +406,37 @@ export default function AdminDashboardPage() {
                  <p style={{ color: '#64748B' }}>No products are currently pending moderation.</p>
                </div>
             ) : (
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Product Details</span>
-                  <span>Supplier</span>
-                  <span>Status</span>
-                  <span>Moderation Action</span>
-                </div>
-                {products.map((p) => (
-                  <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{p.name}</div>
-                      <div style={{ fontSize: 13, color: '#475569' }}>₹{p.priceMin} - ₹{p.priceMax} | MOQ: {p.moq}</div>
-                    </div>
-                    <span style={{ fontSize: 13, color: '#334155', fontWeight: 600 }}>{p.supplier?.businessName}</span>
-                    <span>
-                      <span className={`badge-${p.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                        {p.status}
-                      </span>
-                    </span>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button data-testid="approve-product" onClick={() => handleReviewProduct(p.id, 'APPROVED')} className="btn-primary" style={{ background: '#16A34A', padding: '6px 12px', fontSize: 12 }}>
-                        Approve Listing
-                      </button>
-                      <button data-testid="reject-product" onClick={() => handleReviewProduct(p.id, 'REJECTED')} className="btn-primary" style={{ background: '#DC2626', padding: '6px 12px', fontSize: 12 }}>
-                        Reject
-                      </button>
-                    </div>
+              <div className="card w-full overflow-x-auto">
+                <div style={{ minWidth: 800 }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Product Details</span>
+                    <span>Supplier</span>
+                    <span>Status</span>
+                    <span>Moderation Action</span>
                   </div>
-                ))}
+                  {products.map((p) => (
+                    <div key={p.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'center', fontSize: 14 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>{p.name}</div>
+                        <div style={{ fontSize: 13, color: '#475569' }}>₹{p.priceMin} - ₹{p.priceMax} | MOQ: {p.moq}</div>
+                      </div>
+                      <span style={{ fontSize: 13, color: '#334155', fontWeight: 600 }}>{p.supplier?.businessName}</span>
+                      <span>
+                        <span className={`badge-${p.status.toLowerCase()}`} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                          {p.status}
+                        </span>
+                      </span>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button data-testid="approve-product" onClick={() => handleReviewProduct(p.id, 'APPROVED')} className="btn-primary" style={{ background: '#16A34A', padding: '6px 12px', fontSize: 12 }}>
+                          Approve Listing
+                        </button>
+                        <button data-testid="reject-product" onClick={() => handleReviewProduct(p.id, 'REJECTED')} className="btn-primary" style={{ background: '#DC2626', padding: '6px 12px', fontSize: 12 }}>
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -468,28 +481,30 @@ export default function AdminDashboardPage() {
             {auditLogs.length === 0 ? (
                <div className="card" style={{ padding: 60, textAlign: 'center', color: '#64748B' }}>No audit logs found.</div>
             ) : (
-              <div className="card" style={{ overflow: 'hidden' }}>
-                <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Timestamp</span>
-                  <span>Action</span>
-                  <span>Entity</span>
-                  <span>Performed By</span>
-                  <span>Details</span>
-                </div>
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'flex-start', fontSize: 13 }}>
-                    <span style={{ color: '#64748B' }}>{new Date(log.createdAt).toLocaleString()}</span>
-                    <span style={{ fontWeight: 700, color: '#DC2626' }}>{log.action}</span>
-                    <span style={{ color: '#334155', fontWeight: 600 }}>{log.entity}</span>
-                    <span style={{ color: '#64748B' }}>
-                      <div style={{ fontWeight: 600, color: '#0F172A', marginBottom: 2 }}>{log.user?.phone}</div>
-                      <div style={{ fontSize: 11 }}>{log.user?.role}</div>
-                    </span>
-                    <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#475569', background: '#F8FAFC', padding: 8, borderRadius: 4, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-                      {log.metadata ? JSON.stringify(log.metadata, null, 2) : '—'}
-                    </span>
+              <div className="card w-full overflow-x-auto">
+                <div style={{ minWidth: 800 }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1.5fr', padding: '16px 24px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 600, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Timestamp</span>
+                    <span>Action</span>
+                    <span>Entity</span>
+                    <span>Performed By</span>
+                    <span>Details</span>
                   </div>
-                ))}
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1fr 1.5fr', padding: '16px 24px', borderBottom: '1px solid #F1F5F9', alignItems: 'flex-start', fontSize: 13 }}>
+                      <span style={{ color: '#64748B' }}>{new Date(log.createdAt).toLocaleString()}</span>
+                      <span style={{ fontWeight: 700, color: '#DC2626' }}>{log.action}</span>
+                      <span style={{ color: '#334155', fontWeight: 600 }}>{log.entity}</span>
+                      <span style={{ color: '#64748B' }}>
+                        <div style={{ fontWeight: 600, color: '#0F172A', marginBottom: 2 }}>{log.user?.phone}</div>
+                        <div style={{ fontSize: 11 }}>{log.user?.role}</div>
+                      </span>
+                      <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#475569', background: '#F8FAFC', padding: 8, borderRadius: 4, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                        {log.metadata ? JSON.stringify(log.metadata, null, 2) : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
