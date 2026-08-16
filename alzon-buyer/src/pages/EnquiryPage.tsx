@@ -20,8 +20,13 @@ export default function EnquiryPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!isInitializing && !user) {
-      navigate('/login');
+    if (!isInitializing) {
+      if (!user) {
+        navigate('/login');
+      } else if (user.role !== 'BUYER') {
+        useAuthStore.setState({ accessToken: null, user: null });
+        navigate('/login');
+      }
     }
   }, [user, isInitializing, navigate]);
 

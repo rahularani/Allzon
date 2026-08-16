@@ -42,9 +42,9 @@ test.describe('Complete Business Lifecycle Flow', () => {
   test.beforeAll(async ({ request }) => {
     // Login all three roles
     const [suppRes, buyerRes, adminRes] = await Promise.all([
-      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.supplierVerified.phone, password: TEST_ACCOUNTS.supplierVerified.password } }),
-      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.buyer.phone, password: TEST_ACCOUNTS.buyer.password } }),
-      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.admin.phone, password: TEST_ACCOUNTS.admin.password } }),
+      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.supplierVerified.phone, password: TEST_ACCOUNTS.supplierVerified.password }, headers: { 'X-Portal': 'supplier' } }),
+      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.buyer.phone, password: TEST_ACCOUNTS.buyer.password }, headers: { 'X-Portal': 'buyer' } }),
+      request.post(`${API}/auth/login`, { data: { phone: TEST_ACCOUNTS.admin.phone, password: TEST_ACCOUNTS.admin.password }, headers: { 'X-Portal': 'admin' } }),
     ]);
     supplierToken = (await suppRes.json()).data.accessToken;
     buyerToken = (await buyerRes.json()).data.accessToken;
@@ -256,8 +256,8 @@ test.describe('Complete Business Lifecycle Flow', () => {
 
     // Login buyer via UI
     await page.goto(`${BASE_URLS.buyer}/login`);
-    await page.locator('input[placeholder*="9000000003"]').fill(TEST_ACCOUNTS.buyer.phone);
-    await page.locator('input[type="password"]').fill(TEST_ACCOUNTS.buyer.password);
+    await page.getByPlaceholder('Enter mobile number').fill(TEST_ACCOUNTS.buyer.phone);
+    await page.getByPlaceholder('••••••••').fill(TEST_ACCOUNTS.buyer.password);
 
     const [enqResponse] = await Promise.all([
       page.waitForResponse((r) => r.url().includes('/enquiries/buyer/mine'), { timeout: 20000 }),
@@ -300,6 +300,7 @@ test.describe('Complete Business Lifecycle Flow', () => {
   test('FLOW-13: Verification Staff can access product moderation but NOT user management', async ({ request }) => {
     const loginRes = await request.post(`${API}/auth/login`, {
       data: { phone: TEST_ACCOUNTS.staff.phone, password: TEST_ACCOUNTS.staff.password },
+      headers: { 'X-Portal': 'admin' },
     });
     const staffToken = (await loginRes.json()).data.accessToken;
 

@@ -85,8 +85,13 @@ export default function SupplierDashboardPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (!isInitializing && !user) {
-      navigate('/login');
+    if (!isInitializing) {
+      if (!user) {
+        navigate('/login');
+      } else if (user.role !== 'SUPPLIER') {
+        useAuthStore.setState({ accessToken: null, user: null });
+        navigate('/login');
+      }
     }
   }, [user, isInitializing, navigate]);
 

@@ -33,8 +33,13 @@ export default function AdminDashboardPage() {
   const [newCatDesc, setNewCatDesc] = useState('');
 
   useEffect(() => {
-    if (!isInitializing && (!user || (user.role !== 'ADMIN' && user.role !== 'VERIFICATION_STAFF'))) {
-      navigate('/login');
+    if (!isInitializing) {
+      if (!user) {
+        navigate('/login');
+      } else if (user.role !== 'ADMIN' && user.role !== 'VERIFICATION_STAFF') {
+        useAuthStore.setState({ accessToken: null, user: null });
+        navigate('/login');
+      }
     }
   }, [user, isInitializing, navigate]);
 

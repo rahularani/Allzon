@@ -8,6 +8,7 @@ export const api = axios.create({
   withCredentials: true, // Auto-send httpOnly refresh cookies cross-domain
   headers: {
     'Content-Type': 'application/json',
+    'X-Portal': 'buyer',
   },
 });
 
@@ -68,7 +69,10 @@ api.interceptors.response.use(
         const res = await axios.post(
           `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
-          { withCredentials: true },
+          {
+            withCredentials: true,
+            headers: { 'X-Portal': 'buyer' },
+          },
         );
 
         const newAccessToken = res.data.data.accessToken;

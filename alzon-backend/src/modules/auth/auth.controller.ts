@@ -13,16 +13,25 @@ import {
 } from './auth.service';
 import { sendSuccess } from '../../utils/response';
 
-const REFRESH_COOKIE = 'refreshToken';
+import { badRequest, unauthorized } from '../../middleware/error.middleware';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function setRefreshCookie(res: Response, token: string): void {
-  res.cookie(REFRESH_COOKIE, token, getRefreshCookieOptions());
+function getCookieName(req: Request): string {
+  const portal = req.headers['x-portal'];
+  if (!portal) {
+    throw badRequest('X-Portal header is required');
+  }
+  if (portal === 'buyer') return 'allzon_buyer_refresh';
+  if (portal === 'supplier') return 'allzon_supplier_refresh';
+  if (portal === 'admin') return 'allzon_admin_refresh';
+  throw badRequest('Invalid X-Portal header value');
 }
 
-function clearRefreshCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
+function setRefreshCookie(res: Response, token: string, cookieName: string): void {
+  res.cookie(cookieName, token, getRefreshCookieOptions());
+}
+
+function clearRefreshCookie(res: Response, cookieName: string): void {
+  res.clearCookie(cookieName, { path: '/api/v1/auth' });
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -59,8 +68,21 @@ export async function registerHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const portal = req.headers['x-portal'] as string;
+    const cookieName = getCookieName(req);
     const { user, accessToken, rawRefreshToken } = await registerService(req.body);
-    setRefreshCookie(res, rawRefreshToken);
+
+    if (portal === 'buyer' && user.role !== 'BUYER') {
+      throw unauthorized('Access denied for Buyer portal');
+    }
+    if (portal === 'supplier' && user.role !== 'SUPPLIER') {
+      throw unauthorized('Access denied for Supplier portal');
+    }
+    if (portal === 'admin' && user.role !== 'ADMIN' && user.role !== 'VERIFICATION_STAFF') {
+      throw unauthorized('Access denied for Admin portal');
+    }
+
+    setRefreshCookie(res, rawRefreshToken, cookieName);
     sendSuccess(res, { user, accessToken }, 'Account created successfully', 201);
   } catch (err) {
     next(err);
@@ -73,8 +95,21 @@ export async function loginHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const portal = req.headers['x-portal'] as string;
+    const cookieName = getCookieName(req);
     const { user, accessToken, rawRefreshToken } = await loginService(req.body);
-    setRefreshCookie(res, rawRefreshToken);
+
+    if (portal === 'buyer' && user.role !== 'BUYER') {
+      throw unauthorized('Access denied for Buyer portal');
+    }
+    if (portal === 'supplier' && user.role !== 'SUPPLIER') {
+      throw unauthorized('Access denied for Supplier portal');
+    }
+    if (portal === 'admin' && user.role !== 'ADMIN' && user.role !== 'VERIFICATION_STAFF') {
+      throw unauthorized('Access denied for Admin portal');
+    }
+
+    setRefreshCookie(res, rawRefreshToken, cookieName);
     sendSuccess(res, { user, accessToken }, 'Login successful');
   } catch (err) {
     next(err);
@@ -87,9 +122,11 @@ export async function refreshHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const rawToken: string = req.cookies?.[REFRESH_COOKIE] ?? '';
-    const { accessToken, rawRefreshToken } = await refreshTokenService(rawToken);
-    setRefreshCookie(res, rawRefreshToken);
+    const portal = req.headers['x-portal'] as string;
+    const cookieName = getCookieName(req);
+    const rawToken: string = req.cookies?.[cookieName] ?? '';
+    const { accessToken, rawRefreshToken } = await refreshTokenService(rawToken, portal);
+    setRefreshCookie(res, rawRefreshToken, cookieName);
     sendSuccess(res, { accessToken }, 'Token refreshed');
   } catch (err) {
     next(err);
@@ -102,9 +139,10 @@ export async function logoutHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const rawToken: string = req.cookies?.[REFRESH_COOKIE] ?? '';
+    const cookieName = getCookieName(req);
+    const rawToken: string = req.cookies?.[cookieName] ?? '';
     await logoutService(rawToken);
-    clearRefreshCookie(res);
+    clearRefreshCookie(res, cookieName);
     sendSuccess(res, null, 'Logged out successfully');
   } catch (err) {
     next(err);

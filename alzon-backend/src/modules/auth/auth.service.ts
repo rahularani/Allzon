@@ -202,7 +202,7 @@ export async function loginService(input: LoginInput): Promise<{
   };
 }
 
-export async function refreshTokenService(rawToken: string): Promise<{
+export async function refreshTokenService(rawToken: string, portal?: string): Promise<{
   accessToken: string;
   rawRefreshToken: string;
 }> {
@@ -226,6 +226,21 @@ export async function refreshTokenService(rawToken: string): Promise<{
 
   if (!matched) throw unauthorized('Refresh token is invalid or expired');
   if (!matched.user.isActive) throw unauthorized('Account is suspended');
+
+  // Validate user role matches the target portal
+  if (portal === 'buyer' && matched.user.role !== 'BUYER') {
+    throw unauthorized('Access denied: User is not a Buyer');
+  }
+  if (portal === 'supplier' && matched.user.role !== 'SUPPLIER') {
+    throw unauthorized('Access denied: User is not a Supplier');
+  }
+  if (
+    portal === 'admin' &&
+    matched.user.role !== 'ADMIN' &&
+    matched.user.role !== 'VERIFICATION_STAFF'
+  ) {
+    throw unauthorized('Access denied: User is not an Admin or Staff');
+  }
 
   // Rotate: revoke old, issue new
   await prisma.refreshToken.update({

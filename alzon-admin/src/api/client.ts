@@ -8,6 +8,7 @@ export const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Portal': 'admin',
   },
 });
 
@@ -65,7 +66,10 @@ api.interceptors.response.use(
         const res = await axios.post(
           `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
-          { withCredentials: true },
+          {
+            withCredentials: true,
+            headers: { 'X-Portal': 'admin' },
+          },
         );
 
         const newAccessToken = res.data.data.accessToken;

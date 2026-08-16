@@ -52,7 +52,7 @@ app.use(
     },
     credentials: true, // Required for httpOnly refresh-token cookies
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Portal'],
   }),
 );
 

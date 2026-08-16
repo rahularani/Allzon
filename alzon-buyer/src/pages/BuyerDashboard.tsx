@@ -44,8 +44,13 @@ export default function BuyerDashboard() {
   const error = (isEnqError || isWishError || isNotifError) ? 'Failed to load dashboard data. Please try again.' : null;
 
   useEffect(() => {
-    if (!isInitializing && !user) {
-      navigate('/login');
+    if (!isInitializing) {
+      if (!user) {
+        navigate('/login');
+      } else if (user.role !== 'BUYER') {
+        useAuthStore.setState({ accessToken: null, user: null });
+        navigate('/login');
+      }
     }
   }, [user, isInitializing, navigate]);
 
