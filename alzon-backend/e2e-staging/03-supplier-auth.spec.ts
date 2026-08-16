@@ -5,7 +5,7 @@ import { TEST_ACCOUNTS } from '../e2e/config/test.config';
 test.describe('TEST 03 & 20 — SUPPLIER AUTHENTICATION & REFRESH', () => {
   test('Login with existing seeded supplier account and test persistence', async ({ page }) => {
     await page.goto(`${BASE_URLS.supplier}/login`);
-    await page.locator('input[placeholder*="9000000004"]').fill(TEST_ACCOUNTS.supplierVerified.phone);
+    await page.locator('input[placeholder*="9000000004"], input[placeholder*="Enter mobile"]').fill(TEST_ACCOUNTS.supplierVerified.phone);
     await page.locator('input[type="password"]').fill(TEST_ACCOUNTS.supplierVerified.password);
     
     const [response] = await Promise.all([

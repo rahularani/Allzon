@@ -28,7 +28,8 @@ test.describe('TEST 01 & 15 — INFRASTRUCTURE & CORS', () => {
   });
 
   test('CORS allows buyer origin', async ({ request }) => {
-    const res = await request.options(`${BASE_URLS.backend}/health`, {
+    const res = await request.fetch(`${BASE_URLS.backend}/health`, {
+      method: 'OPTIONS',
       headers: {
         Origin: BASE_URLS.buyer,
         'Access-Control-Request-Method': 'GET',

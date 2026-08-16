@@ -5,17 +5,17 @@ import { TEST_ACCOUNTS } from '../e2e/config/test.config';
 test.describe('TEST 02 & 06 & 20 — BUYER AUTHENTICATION & REFRESH', () => {
   test.describe('Registration & OTP', () => {
     test('Register test buyer and request OTP', async ({ request }) => {
-      // The instructions require testing registration, but note this as a TEST ENVIRONMENT BLOCKER if it fails
-      // due to OTP being printed to console and unreachable.
+      // Use dynamic phone number to avoid database conflicts on rerun
+      const randomPhone = '999' + Date.now().toString().slice(-7);
       const res = await request.post(`${BASE_URLS.backend}/api/v1/auth/register`, {
         data: {
-          phone: '9999999903',
+          phone: randomPhone,
           password: 'Password@123',
           role: 'BUYER'
         }
       });
-      // We expect this to return success true (OTP sent). We cannot retrieve it in staging though.
-      expect(res.status()).toBe(200);
+      // We expect this to return success true (OTP sent). Registration returns 201.
+      expect([200, 201]).toContain(res.status());
       const body = await res.json();
       expect(body.success).toBe(true);
     });
@@ -31,7 +31,7 @@ test.describe('TEST 02 & 06 & 20 — BUYER AUTHENTICATION & REFRESH', () => {
   test.describe('Login & Session Persistence', () => {
     test('Login with existing seeded buyer account', async ({ page }) => {
       await page.goto(`${BASE_URLS.buyer}/login`);
-      await page.locator('input[placeholder*="9000000003"]').fill(TEST_ACCOUNTS.buyer.phone);
+      await page.locator('input[placeholder*="9000000003"], input[placeholder*="Enter mobile"]').fill(TEST_ACCOUNTS.buyer.phone);
       await page.locator('input[type="password"]').fill(TEST_ACCOUNTS.buyer.password);
       
       const [response] = await Promise.all([
